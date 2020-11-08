@@ -1,0 +1,69 @@
+{
+  "project_info": {
+    "project_number": "444831156675",
+    "firebase_url": "https://need-c4ff6.firebaseio.com",
+    "project_id": "need-c4ff6",
+    "storage_bucket": "need-c4ff6.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:444831156675:android:8270b01d967165446ad576",
+        "android_client_info": {
+          "package_name": "com.onoo.NeedEG"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "444831156675-f0vge3jgf3l3e6gs2u37eftf07r2nael.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBY-b88IyJopMPLwU73J23dU8_LNoTCLFQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "444831156675-f0vge3jgf3l3e6gs2u37eftf07r2nael.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:444831156675:android:2121a93ed639c1ba6ad576",
+        "android_client_info": {
+          "package_name": "com.onoo.adminneed"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "444831156675-f0vge3jgf3l3e6gs2u37eftf07r2nael.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBY-b88IyJopMPLwU73J23dU8_LNoTCLFQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "444831156675-f0vge3jgf3l3e6gs2u37eftf07r2nael.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
