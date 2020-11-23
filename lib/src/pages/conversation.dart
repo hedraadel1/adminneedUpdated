@@ -1,32 +1,38 @@
+import 'dart:convert';
 import 'dart:io';
-
-import 'package:adminneed/authsign.dart';
-import 'package:adminneed/users.dart';
-import 'package:adminneed/usersList.dart';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:g_json/g_json.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:progressive_image/progressive_image.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
+import '../models/users.dart';
+import '../pages/usersList.dart';
+import '../helpers/authsign.dart';
+
 //import 'package:rflutter_alert/rflutter_alert.dart';
+import 'package:http/http.dart' as http;
 
 class Conversation extends StatefulWidget {
   TextEditingController sear = new TextEditingController();
   authsign auth = authsign();
   List<users> data = [];
   bool search = false;
-  String id, Email,Admin_email;
+  String id, Email, pharmcy_email;
   Stream<QuerySnapshot> chats;
   File _image;
   String _uploadedFileURL;
-  Conversation(this.id, this.Email,this.Admin_email);
+  String _token;
+
+  Conversation(this.id, this.Email, this.pharmcy_email);
+
   bool show = false;
+
   @override
   _ConversationState createState() => _ConversationState();
 }
@@ -37,19 +43,28 @@ class _ConversationState extends State<Conversation> {
   RefreshController _refreshController =
       RefreshController(initialRefresh: false);
 
+  String _token;
+
   void _onRefresh() async {
     // monitor network fetch
     //  await Future.delayed(Duration(milliseconds: 1000));
     // if failed,use refreshFailed()
     authsign m = authsign();
+    if (widget.pharmcy_email.isEmpty) {
       m.getMessages(widget.id).then((val) {
         setState(() {
           widget.chats = val;
         });
       });
-
+    } else {
+      m.getMessagesPharmacy(widget.pharmcy_email, widget.Email).then((val) {
+        setState(() {
+          widget.chats = val;
+        });
+      });
+    }
     _controller.animateTo(
-_controller.position.maxScrollExtent,
+      _controller.position.maxScrollExtent,
       duration: Duration(seconds: 3),
       curve: Curves.fastOutSlowIn,
     );
@@ -96,12 +111,21 @@ _controller.position.maxScrollExtent,
                     controller: _controller,
                     itemCount: snapshot.data.documents.length,
                     itemBuilder: (context, index) {
-                      return  _chatBubble(
-                          snapshot.data.documents[index].data["message"],
-                          snapshot.data.documents[index].data["Email"]==widget.Admin_email,
-                          snapshot.data.documents[index].data["time"], false,
-                          snapshot.data.documents[index].data["image"]);
-
+                      return widget.pharmcy_email.isEmpty
+                          ? _chatBubble(
+                              snapshot.data.documents[index].data["message"],
+                              snapshot.data.documents[index].data["Email"] ==
+                                  "admin@gmail.com",
+                              snapshot.data.documents[index].data["time"],
+                              false,
+                              snapshot.data.documents[index].data["image"])
+                          : _chatBubble(
+                              snapshot.data.documents[index].data["message"],
+                              snapshot.data.documents[index].data["Email"] ==
+                                  widget.pharmcy_email,
+                              snapshot.data.documents[index].data["time"],
+                              false,
+                              snapshot.data.documents[index].data["image"]);
                     }))
             : Container();
       },
@@ -111,11 +135,19 @@ _controller.position.maxScrollExtent,
   @override
   void initState() {
     authsign m = authsign();
+    if (widget.pharmcy_email.isEmpty) {
       m.getMessages(widget.id).then((val) {
         setState(() {
           widget.chats = val;
         });
       });
+    } else {
+      m.getMessagesPharmacy(widget.pharmcy_email, widget.Email).then((val) {
+        setState(() {
+          widget.chats = val;
+        });
+      });
+    }
     super.initState();
   }
 
@@ -126,7 +158,7 @@ _controller.position.maxScrollExtent,
       child: Scaffold(
         backgroundColor: Color(0xFFF6F6F6),
         appBar: AppBar(
-          title:Text("Chating..."),
+          title: Text("Chating..."),
         ),
         body: Stack(
           children: [
@@ -166,13 +198,9 @@ _controller.position.maxScrollExtent,
                       icon: Icon(Icons.send),
                       iconSize: 25,
                       color: Theme.of(context).primaryColor,
-                      onPressed: ()async {
-
-  sendmessage(
-      widget.id, widget.sear.text, widget.Admin_email, "");
-
-                        widget.sear.text="";
-                        },
+                      onPressed: () async {
+                        sendMessage();
+                      },
                     ),
                   ],
                 ),
@@ -424,6 +452,78 @@ _controller.position.maxScrollExtent,
       }
     }
   }
+
+  void sendMessage() {
+    getToken(widget.Email).then((value) async {
+      if (value != null) {
+        if (widget.pharmcy_email.isEmpty) {
+          if (_token != null) {
+            print("tokennnnnnn $_token");
+            sendmessage(widget.id, widget.sear.text, "admin@gmail.com", "");
+            bool send = await sendFcmMessage(
+                widget.sear.text, widget.sear.text, _token);
+            if (send == true) {
+              Fluttertoast.showToast(
+                  msg: "send",
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.CENTER,
+                  timeInSecForIosWeb: 1,
+                  backgroundColor: Colors.red,
+                  textColor: Colors.white,
+                  fontSize: 16.0);
+            } else {
+              Fluttertoast.showToast(
+                  msg: "Failed ",
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.CENTER,
+                  timeInSecForIosWeb: 1,
+                  backgroundColor: Colors.red,
+                  textColor: Colors.white,
+                  fontSize: 16.0);
+            }
+          }
+        } else {
+          if (_token != null) {
+            sendFcmMessage(widget.sear.text, widget.sear.text, _token);
+          } else {
+            print("nullllll");
+          }
+          final res = await Firestore.instance
+              .collection("Conversation")
+              .document(widget.pharmcy_email)
+              .collection(widget.Email)
+              .add({
+            "Email": widget.pharmcy_email,
+            "message": widget.sear.text,
+            "time": DateTime.now().millisecondsSinceEpoch,
+            "image": ""
+          }).catchError((e) {
+            print(e.message);
+          });
+        }
+        widget.sear.text = "";
+      }
+    }).catchError((e) {
+      print("errorrrrrrr  $e");
+    });
+  }
+
+  Future<String> getToken(String email) async {
+    var uri =
+        Uri.parse("http://www.needeg.com/newneed/public/api/get-token?email=$email");
+
+    var response = await http.get(uri);
+    if (response.statusCode == 200) {
+      var json = jsonDecode(response.body);
+      print("json $json");
+      _token = json['data'].toString().replaceAll('[', '').replaceAll(']', '');
+      print("tok $_token");
+    } else {
+      throw new Exception(response.body);
+    }
+    return _token;
+  }
+
   void sendmessage(
       String id, String message, String Email, String img_url) async {
     if (id != null) {
@@ -443,12 +543,43 @@ _controller.position.maxScrollExtent,
       print("null values");
     }
   }
+
+  static Future<bool> sendFcmMessage(
+      String title, String message, String token) async {
+    try {
+      var url = 'https://fcm.googleapis.com/fcm/send';
+      var header = {
+        "Content-Type": "application/json",
+        "Authorization":
+            "key=AAAAZ5IAycM:APA91bHMIBhqXY-S6RGgpV49fV6c3PC_hNguN5qNEVmkFLEDMLdQlGOLiHn-7-Ai-SC3uV5WiPsg6fEJRNq9VeB7gCBHkj5y_fTcx5SP5-jnFxFsYwL5N3IPGYXkxqP8_dc1XN29IQMu",
+      };
+      var request = {
+        'notification': {'title': title, 'body': message},
+        'data': {
+          'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+          'type': 'COMMENT'
+        },
+        'to': '$token'
+      };
+
+      var client = new http.Client();
+      var response =
+          await client.post(url, headers: header, body: json.encode(request));
+
+      return true;
+    } catch (e, s) {
+      print(e);
+      return false;
+    }
+  }
+
   String timeString(var time) {
     DateTime date = new DateTime.fromMillisecondsSinceEpoch(time);
     var format = new DateFormat("yMd");
     var dateString = format.format(date);
     return dateString;
   }
+
   void OpenGalleryAndUplodeImage() async {
     await chooseFile();
     if (widget._image != null) {
@@ -479,12 +610,25 @@ _controller.position.maxScrollExtent,
     print('File Uploaded');
     storageReference.getDownloadURL().then((fileURL) async {
       if (fileURL != null) {
-
-          sendmessage(widget.id, "", widget.Admin_email, fileURL);
-
+        if (widget.pharmcy_email.isEmpty) {
+          sendmessage(widget.id, "", "admin@gmail.com", fileURL);
+        } else {
+          final res = await Firestore.instance
+              .collection("Conversation")
+              .document(widget.pharmcy_email)
+              .collection(widget.Email)
+              .add({
+            "Email": widget.pharmcy_email,
+            "message": "",
+            "time": DateTime.now().millisecondsSinceEpoch,
+            "image": fileURL
+          }).catchError((e) {
+            print(e.message);
+          });
+        }
       } else {
         Fluttertoast.showToast(
-            msg: "Failed to uplode image",
+            msg: "Failed to uplode im,,age",
             toastLength: Toast.LENGTH_SHORT,
             gravity: ToastGravity.CENTER,
             timeInSecForIosWeb: 1,
@@ -497,44 +641,58 @@ _controller.position.maxScrollExtent,
 
   Future<bool> _onBackPressed() {
     return showDialog(
-      context: context,
-      builder: (context) => new AlertDialog(
-        title: new Text('Are you sure?'),
-        content: new Text('Do you want to delete this chat'),
-        actions: <Widget>[
-          new GestureDetector(
-            onTap: (){
-
-                Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) =>
-                            usersList(widget.Admin_email, "")),
-                        (Route<dynamic> route) =>
-                    false);
-
-    },
-            child: Text("NO"),
+          context: context,
+          builder: (context) => new AlertDialog(
+            title: new Text('Are you sure?'),
+            content: new Text('Do you want to delete this chat'),
+            actions: <Widget>[
+              new GestureDetector(
+                onTap: () {
+                  if (widget.pharmcy_email.isEmpty) {
+                    Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                usersList(email: "admin@gmail.com")),
+                        (Route<dynamic> route) => false);
+                  } else {
+                    Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                usersList(email: widget.pharmcy_email)),
+                        (Route<dynamic> route) => false);
+                  }
+                },
+                child: Text("NO"),
+              ),
+              SizedBox(height: 16),
+              new GestureDetector(
+                onTap: () {
+                  if (widget.pharmcy_email.isEmpty) {
+                    widget.auth.deleteMessages(widget.id);
+                    Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                usersList(email: "admin@gmail.com")),
+                        (Route<dynamic> route) => false);
+                  } else {
+                    widget.auth.deleteMessagesforpharmcy(
+                        widget.Email, widget.pharmcy_email);
+                    Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                usersList(email: widget.pharmcy_email)),
+                        (Route<dynamic> route) => false);
+                  }
+                },
+                child: Text("YES"),
+              ),
+            ],
           ),
-          SizedBox(height: 16),
-          new GestureDetector(
-            onTap: () {
-
-      widget.auth.deleteMessages(widget.id);
-      Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(
-              builder: (context) =>
-                  usersList(widget.Admin_email, "")),
-              (Route<dynamic> route) =>
-          false);
-
-    },
-            child: Text("YES"),
-          ),
-        ],
-      ),
-    ) ??
+        ) ??
         false;
   }
 }

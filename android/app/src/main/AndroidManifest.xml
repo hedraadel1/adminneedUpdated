@@ -7,8 +7,12 @@
          FlutterApplication and put your custom class here. -->
     <application
         android:name="io.flutter.app.FlutterApplication"
-        android:label="adminneed"
+        android:label="Need Admin"
         android:icon="@mipmap/ic_launcher">
+
+        <meta-data android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyBLWZgl51r-DCegjsARlYdhTZI6vX3k5Sk"/>
+
         <activity
             android:name=".MainActivity"
             android:launchMode="singleTop"

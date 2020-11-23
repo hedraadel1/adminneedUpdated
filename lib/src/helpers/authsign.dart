@@ -1,11 +1,9 @@
-import 'package:adminneed/users.dart';
-import 'package:adminneed/usersph.dart';
+import '../models/users.dart';
+import '../models/usersph.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:adminneed/sharedprefrence.dart';
-import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:adminneed/src/controllers/sharedprefrence.dart';
 
 class authsign {
   final Firestore _firestore = Firestore.instance;
@@ -54,36 +52,53 @@ class authsign {
     }
     return data;
   }
+
   Future<List<users>> getusers() async {
     List<users> data = [];
-    final re = await Firestore.instance.collection("Users").getDocuments();
+    final re = await Firestore.instance.collection("UsersMarkets").getDocuments();
     for (var doc in re.documents) {
       int count = await getCount(doc.data["Email"]);
       data.add(users(doc.data["name"], doc.data["Email"], count));
     }
     data.sort((a, b) => a.count.compareTo(b.count));
+
     return data;
   }
- uplodeuserinfo(String email, String name) {
+
+  uplodeuserinfo(String email, String name) {
     _firestore.collection("Users").add({"name": name, "Email": email});
   }
+
+  uplodeuserinfo2(String name, String email, String token)  {
+    _firestore
+        .collection("AdminMarket")
+        .add({"name": name, "Email": email, "token": token});
+  }
+
+
+
   final _auth = FirebaseAuth.instance;
+
   Future<AuthResult> Signup(String email, String password) async {
     final authresut = await _auth.createUserWithEmailAndPassword(
         email: email, password: password);
     return authresut;
   }
+
   Future<AuthResult> Signin(String email, String password) async {
     final authresut = await _auth.signInWithEmailAndPassword(
         email: email, password: password);
     return authresut;
   }
+
   Future restPAAWORD(String Email) async {
     return await _auth.sendPasswordResetEmail(email: Email);
   }
+
   Future SignOut() async {
     return await _auth.signOut();
   }
+
   getMessages(String id) async {
     return await _firestore
         .collection("Conversation")
@@ -142,30 +157,30 @@ class authsign {
 
     FirebaseMessaging _firebaseMessaging;
     _firebaseMessaging = FirebaseMessaging();
-      _firebaseMessaging.getToken().then((String _deviceToken) async {
-        if (_deviceToken.isNotEmpty) {
-          if (!firsttime) {
-            try {
-              _firestore
-                  .collection("Admin")
-                  .document(Email)
-                  .setData({"Email": Email, "token": _deviceToken});
-              await shareddata.IS_FIRST_TIME(true);
-            } catch (e) {}
-          } else {
-            try {
-              _firestore
-                  .collection("Admin")
-                  .document(Email)
-                  .updateData({"Email": Email, "token": _deviceToken});
-            } catch (e) {}
-          }
+    _firebaseMessaging.getToken().then((String _deviceToken) async {
+      if (_deviceToken.isNotEmpty) {
+        if (!firsttime) {
+          try {
+            _firestore
+                .collection("Admin")
+                .document(Email)
+                .setData({"Email": Email, "token": _deviceToken});
+            await shareddata.IS_FIRST_TIME(true);
+          } catch (e) {}
+        } else {
+          try {
+            _firestore
+                .collection("Admin")
+                .document(Email)
+                .updateData({"Email": Email, "token": _deviceToken});
+          } catch (e) {}
         }
-      });
+      }
+    });
 
   }
 
-  uplode_Admin_pharmcy_info(String Email) async {
+  uplode_Admin_market_info(String Email) async {
     bool firsttime=false;
     firsttime = await shareddata.Get_IS_FIRST_TIME_ph();
     if(firsttime==null)
@@ -180,7 +195,7 @@ class authsign {
         if (!firsttime) {
           try {
             _firestore
-                .collection("AdminPharmcy")
+                .collection("AdminMarket")
                 .document(Email)
                 .setData({"Email": Email, "token": _deviceToken});
             await shareddata.IS_FIRST_TIME_ph(true);
@@ -188,7 +203,7 @@ class authsign {
         } else {
           try {
             _firestore
-                .collection("AdminPharmcy")
+                .collection("AdminMarket")
                 .document(Email)
                 .updateData({"Email": Email, "token": _deviceToken});
           } catch (e) {}
@@ -196,4 +211,6 @@ class authsign {
       }
     });
   }
+
+
 }
